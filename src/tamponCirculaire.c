@@ -49,17 +49,47 @@ int initTamponCirculaire(size_t taille){
 
     // TODO
 
+    pthread_mutex_init(&mutexTampon, NULL);
+    pthread_mutex_lock(&mutexTampon);
+    memoire = calloc(taille, sizeof(struct requete));
+    memoireTaille = taille;
+    posLecture = 0;
+    posEcriture = 0;
+    longueurCourante = 0;
+    nombreRequetesPerdues = 0;
+    nombreRequetesRecues = 0;
+    nombreRequetesTraitees = 0;
+    sommeTempsAttente = 0;
+    pthread_mutex_unlock(&mutexTampon);
+    return 0;
+
 }
 
 void resetStats(){
     // Reinitialise les variables de statistique
-
     // TODO
+    pthread_mutex_lock(&mutexTampon);
+    nombreRequetesPerdues = 0;
+    nombreRequetesRecues = 0;
+    nombreRequetesTraitees = 0;
+    sommeTempsAttente = 0;
+    pthread_mutex_unlock(&mutexTampon);
+    
 }
 
 void calculeStats(struct statistiques *stats){
     // TODO
-    
+    pthread_mutex_lock(&mutexTampon);
+    stats->nombreRequetesEnAttente = longueurCourante;
+    stats->nombreRequetesTraitees = nombreRequetesTraitees;
+    stats->nombreRequetesPerdues = nombreRequetesPerdues;
+    stats->tempsTraitementMoyen = sommeTempsAttente / nombreRequetesTraitees;
+    double delta = get_time() - tempsDebutPeriode;
+    stats->lambda = nombreRequetesRecues / delta;
+    stats->mu = nombreRequetesTraitees / delta;
+    stats->rho = stats->lambda / stats->mu ;
+
+    pthread_mutex_unlock(&mutexTampon);
 }
 
 int insererDonnee(struct requete *req){
@@ -79,7 +109,22 @@ int insererDonnee(struct requete *req){
     // N'oubliez pas de proteger les operations qui le necessitent par un mutex!
    
     // TODO
+
+    pthread_mutex_lock(&mutexTampon);
+    req->tempsReception = get_time();
+    void* dest = memoire + posEcriture * sizeof(struct requete);
+    memcpy(dest, req, sizeof(struct requete));
+    longueurCourante++;
+    nombreRequetesRecues++;
+
+       posEcriture++;
+    if(posEcriture >= memoireTaille)
+    {
+        posEcriture = 0;
+    }
+    pthread_mutex_unlock(&mutexTampon);
 }
+
 
 int consommerDonnee(struct requete *req){
     // Dans cette fonction, vous devez :
@@ -95,12 +140,41 @@ int consommerDonnee(struct requete *req){
     //      Retourner 1 pour indiquer qu'une requete disponible a ete copiee dans req.
     //
     // N'oubliez pas de proteger les operations qui le necessitent par un mutex!
+
     
     // TODO
+    pthread_mutex_lock(&mutexTampon);
+    if(longueurCourante == 0)
+    {
+        pthread_mutex_unlock(&mutexTampon);
+        return 0;
+    }
+    else {
+        
+        void* addrLect = memoire + posLecture * sizeof(struct requete);
+        struct requete* reqLue = (struct requete*)(addrLect);
+        req->data = reqLue->data;
+        req->taille = reqLue->taille;
+        req->tempsReception = reqLue->tempsReception;
+
+        posLecture++;
+        if(posLecture >= memoireTaille)
+        {
+            posLecture = 0;
+        }
+        nombreRequetesTraitees++;
+        longueurCourante--;
+        sommeTempsAttente += get_time() - req->tempsReception;
+        pthread_mutex_unlock(&mutexTampon);
+        return 1;
+    }
+
 }
 
 unsigned int longueurFile(){
     // Retourne la longueur courante de la file contenue dans votre tampon circulaire.
     
     // TODO
+
+    return longueurCourante;
 }
