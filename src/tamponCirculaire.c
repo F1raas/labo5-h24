@@ -51,7 +51,8 @@ int initTamponCirculaire(size_t taille){
     // TODO
     pthread_mutex_init(&mutexTampon, NULL);
     pthread_mutex_lock(&mutexTampon);
-    memoire = calloc(taille, sizeof(struct requete));
+    memoire = (char*) malloc(taille* sizeof(struct requete));
+    memset(memoire, 0, sizeof(struct requete)*memoireTaille);
     memoireTaille = taille;
     posLecture = 0;
     posEcriture = 0;
@@ -130,7 +131,7 @@ int insererDonnee(struct requete *req){
 
 
 int consommerDonnee(struct requete *req){
-    printf("tamponCirculaire:consommerDonnee : entered \n");
+    //printf("tamponCirculaire:consommerDonnee : entered \n");
     // Dans cette fonction, vous devez :
     //
     // Determiner si une requete est disponible dans le tampon circulaire
@@ -155,8 +156,10 @@ int consommerDonnee(struct requete *req){
     }
     else {
         
-        void* addrLect = memoire + posLecture * sizeof(struct requete);
+        void* addrLect = memoire + (posLecture * sizeof(struct requete));
         struct requete* reqLue = (struct requete*)(addrLect);
+        printf("req data : %s\n", req->data);
+        printf("req taille : %zu\n", req->taille);
         req->data = reqLue->data;
         req->taille = reqLue->taille;
         req->tempsReception = reqLue->tempsReception;

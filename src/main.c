@@ -52,13 +52,16 @@ static void* threadFonctionClavier(void* args){
        // TODO
        if(consommerDonnee(&req) == 0)
        {
+        //printf("main:threadFonctionClavier : rien a manger \n");
             usleep(500);
        }
        else
        {
+        printf("main:threadFonctionClavier : miam \n");
+            printf("data : %s , taille : %zu \n", req.data, req.taille);
             ecrireCaracteres(infos->pointeurClavier, req.data, req.taille, infos->tempsTraitementParCaractereMicroSecondes);
             printf("main:threadFonctionClavier : Freeing \n");
-            free(req.data); //entraîne des segfaults????
+            //free(req.data); //entraîne des segfaults????
        }
     }
     return NULL;
@@ -77,6 +80,13 @@ static void* threadFonctionLecture(void *args){
 
     // Vous devez ensuite attendre sur la barriere passee dans les arguments
     // pour etre certain de commencer au meme moment que le thread lecteur
+    struct requete req;
+    req.data = (char*)malloc(sizeof(char) * BUFFER_TAILLE);
+    if (!req.data) {
+        perror("Erreur d'allocation mémoire");
+        return NULL;
+    }
+    int taille_read = 0;
     pthread_barrier_wait(infos->barriere);
     // TODO
 
@@ -91,15 +101,13 @@ static void* threadFonctionLecture(void *args){
     //      l'inserer dans le tampon circulaire. Notez que le caractere EOT ne doit PAS se
     //      retrouver dans le champ data de la requete! N'oubliez pas egalement de donner
     //      la bonne valeur aux champs taille et tempsReception.
-    struct requete req;
-    req.data = malloc(sizeof(char) * BUFFER_TAILLE);
-    if (!req.data) {
-        perror("Erreur d'allocation mémoire");
-        return NULL;
-    }
+    FD_ZERO(&setFd);
+    FD_SET(infos->pipeFd, &setFd);
+    
      while(1) {
-        FD_ZERO(&setFd);
-        FD_SET(infos->pipeFd, &setFd);
+        
+
+        req.taille=0;
 
         if (select(nfds, &setFd, NULL, NULL, NULL) == -1) {
             perror("Erreur lors de l'appel à select");
@@ -107,33 +115,28 @@ static void* threadFonctionLecture(void *args){
             return NULL;
         }
 
-        if (FD_ISSET(infos->pipeFd, &setFd)) {
-            ssize_t bytesRead;
-            char buf;
-            req.taille = 0;
+        char last_read;
+        do{
+            taille_read = read(infos->pipeFd, &last_read, 1); //req.data+req.taille, 1);
 
-            while((bytesRead = read(infos->pipeFd, &buf, 1)) > 0) {
-                if (buf == ASCII_EOT) {
-                    req.tempsReception = get_time();
-
-                    insererDonnee(&req);
-                    req.taille = 0; // Réinitialiser pour la prochaine requête
-                    memset(req.data, 0, BUFFER_TAILLE); 
-                } else {
-                    if (req.taille < BUFFER_TAILLE - 1) { // Laisser un espace pour '\0'
-                        req.data[req.taille++] = buf;
-                    }
-                }
+            if(taille_read == 0) break;
+            if( taille_read < 0 ){
+                char* str = (char*)malloc(sizeof(char));
+                sprintf(str, "Erreur lors de la lecture");
+                perror( str );
+                exit(EXIT_FAILURE);
             }
 
-            if (bytesRead == -1) {
-                perror("Erreur de lecture du named pipe");
-                free(req.data);
-                return NULL;
-            } else if (bytesRead == 0) {
-                break;
-            }
-        }
+            *(req.data+req.taille) = last_read;
+
+            req.taille++;
+
+        }while( last_read != ASCII_EOT );
+
+        insererDonnee(&req);
+
+
+
     }
 
     free(req.data);
@@ -194,8 +197,8 @@ int main(int argc, char* argv[]){
     // 4) Creer et lancer les threads clavier et lecteur, en leur passant les bons arguments dans leur struct de configuration respective
     
     // TODO
-    struct infoThreadLecture args_ecr = {peripheriqueClavier, waitingTime, &barriere};
-    struct infoThreadClavier args_lect = {pipeFd, &barriere};
+    struct infoThreadLecture args_lect = {pipeFd, &barriere};
+    struct infoThreadClavier args_ecr = {peripheriqueClavier, waitingTime, &barriere};
     
     pthread_t lect;
     pthread_t ecr;

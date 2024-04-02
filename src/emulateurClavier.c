@@ -42,8 +42,10 @@ int ecrireCaracteres(FILE* periphClavier, const char* caracteres, size_t len, un
 
     // Boucle sur chaque caractère de la chaîne.
     for (i = 0; i < len; i++) {
+        
         char c = caracteres[i];
         int codeHID = asciiToHid(c);
+        printf("emulateurClavier: Char lu : %c , Code HID : %i \n", c, codeHID);
 
         if (isupper(c)) {
             paquet[0] = MODIFICATEUR_SHIFT; 
@@ -58,13 +60,14 @@ int ecrireCaracteres(FILE* periphClavier, const char* caracteres, size_t len, un
             usleep(tempsTraitementParPaquetMicroSecondes);
             memset(paquet, 0, TAILLE_PAQUET_USB);
             fwrite(paquet, sizeof(unsigned char), TAILLE_PAQUET_USB, periphClavier);
+            usleep(tempsTraitementParPaquetMicroSecondes);
             memset(paquet, 0, TAILLE_PAQUET_USB);
             paquet[0] = isupper(caracteres[i + 1]) ? MODIFICATEUR_SHIFT : MODIFICATEUR_AUCUN;
             nbCaracteresDansPaquet = 0;
         }
     }
 
-    return 0; 
+    return len; 
 
 
 }
