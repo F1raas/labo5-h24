@@ -37,6 +37,7 @@ static unsigned int nombreRequetesRecues, nombreRequetesTraitees, nombreRequetes
 static double tempsDebutPeriode, sommeTempsAttente;
 
 int initTamponCirculaire(size_t taille){
+    printf("tamponCirculaire:initTamponCirculaire : entered \n");
     // Initialisez ici:
     // La memoire, en utilisant malloc ou calloc (rappelez-vous que votre tampon circulaire doit
     // pouvoir contenir _taille_ fois la taille d'une struct requete)
@@ -48,7 +49,6 @@ int initTamponCirculaire(size_t taille){
     // Les variables de statistiques
 
     // TODO
-
     pthread_mutex_init(&mutexTampon, NULL);
     pthread_mutex_lock(&mutexTampon);
     memoire = calloc(taille, sizeof(struct requete));
@@ -66,6 +66,7 @@ int initTamponCirculaire(size_t taille){
 }
 
 void resetStats(){
+    printf("tamponCirculaire:resetStats : entered \n");
     // Reinitialise les variables de statistique
     // TODO
     pthread_mutex_lock(&mutexTampon);
@@ -78,6 +79,7 @@ void resetStats(){
 }
 
 void calculeStats(struct statistiques *stats){
+    printf("tamponCirculaire:calculeStats : entered \n");
     // TODO
     pthread_mutex_lock(&mutexTampon);
     stats->nombreRequetesEnAttente = longueurCourante;
@@ -93,6 +95,7 @@ void calculeStats(struct statistiques *stats){
 }
 
 int insererDonnee(struct requete *req){
+    printf("tamponCirculaire:insererDonnee : entered \n");
     // Dans cette fonction, vous devez :
     //
     // Determiner a quel endroit copier la requete req dans le tampon circulaire
@@ -127,6 +130,7 @@ int insererDonnee(struct requete *req){
 
 
 int consommerDonnee(struct requete *req){
+    printf("tamponCirculaire:consommerDonnee : entered \n");
     // Dans cette fonction, vous devez :
     //
     // Determiner si une requete est disponible dans le tampon circulaire
@@ -172,9 +176,9 @@ int consommerDonnee(struct requete *req){
 }
 
 unsigned int longueurFile(){
+    printf("tamponCirculaire:longueurFile : entered \n");
     // Retourne la longueur courante de la file contenue dans votre tampon circulaire.
     
     // TODO
-
     return longueurCourante;
 }
