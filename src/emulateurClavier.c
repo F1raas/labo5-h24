@@ -7,10 +7,12 @@
  * Fichier implémentant les fonctions de l'emulateur de clavier
  ******************************************************************************/
 
+#include <stdbool.h>
 #include "emulateurClavier.h"
 #define TAILLE_PAQUET_USB 8
-#define MODIFICATEUR_AUCUN 0x00
-#define MODIFICATEUR_SHIFT 0x02
+u_int8_t MODIFICATEUR_AUCUN =  0x00;
+u_int8_t MODIFICATEUR_SHIFT = 0x02;
+
 FILE* initClavier(){
     printf("emulateurClavier:initClavier : entered \n");
     // Deja implementee pour vous
@@ -20,7 +22,7 @@ FILE* initClavier(){
 }
 
 int asciiToHid(char c) {
-    printf("emulateurClavier:asciiToHid : entered \n");
+    //printf("emulateurClavier:asciiToHid : entered \n");
     if (c >= 'a' && c <= 'z') return 4 + (c - 'a');
     if (c >= 'A' && c <= 'Z') return 4 + (c - 'A');
     if (c >= '1' && c <= '9') return 30 + (c - '1');
@@ -32,42 +34,108 @@ int asciiToHid(char c) {
     return 0; 
 }
 
+struct charToSendHID{int HidCode; u_int8_t toucheModif;};
+
 int ecrireCaracteres(FILE* periphClavier, const char* caracteres, size_t len, unsigned int tempsTraitementParPaquetMicroSecondes){
-    printf("emulateurClavier:ecrireCaracteres : entered \n");
+    printf("emulateurClavier:ecrireCaracteres : entered, len = %zu \n", len);
     // TODO ecrivez votre code ici. Voyez les explications dans l'enonce et dans
     // emulateurClavier.h
-    unsigned char paquet[TAILLE_PAQUET_USB] = {MODIFICATEUR_AUCUN, 0}; 
-    size_t i = 0;
-    int nbCaracteresDansPaquet = 0;
+    
+    struct charToSendHID arrayCharToSend[len];
 
-    // Boucle sur chaque caractère de la chaîne.
-    for (i = 0; i < len; i++) {
+    for(size_t i = 0; i < len; i++)
+    {
         
-        char c = caracteres[i];
-        int codeHID = asciiToHid(c);
-        printf("emulateurClavier: Char lu : %c , Code HID : %i \n", c, codeHID);
+        
+        arrayCharToSend[i].HidCode = asciiToHid(caracteres[i]);
 
-        if (isupper(c)) {
-            paquet[0] = MODIFICATEUR_SHIFT; 
+        if(isupper(caracteres[i]))
+        {
+            arrayCharToSend[i].toucheModif = MODIFICATEUR_SHIFT;
         }
-
-        if (codeHID != 0) {
-            paquet[2 + nbCaracteresDansPaquet++] = codeHID;
-        }
-
-        if (nbCaracteresDansPaquet == 6 || i == len - 1) {
-            fwrite(paquet, sizeof(unsigned char), TAILLE_PAQUET_USB, periphClavier);
-            usleep(tempsTraitementParPaquetMicroSecondes);
-            memset(paquet, 0, TAILLE_PAQUET_USB);
-            fwrite(paquet, sizeof(unsigned char), TAILLE_PAQUET_USB, periphClavier);
-            usleep(tempsTraitementParPaquetMicroSecondes);
-            memset(paquet, 0, TAILLE_PAQUET_USB);
-            paquet[0] = isupper(caracteres[i + 1]) ? MODIFICATEUR_SHIFT : MODIFICATEUR_AUCUN;
-            nbCaracteresDansPaquet = 0;
+        else
+        {
+            arrayCharToSend[i].toucheModif = MODIFICATEUR_AUCUN;
         }
     }
 
-    return len; 
+    u_int8_t currentShiftState = arrayCharToSend[0].toucheModif;
+    bool isThereAPacket = false;
+    u_int8_t paquet[TAILLE_PAQUET_USB] = {0};
+    int packetIndex = 0;
+    int counter = 0;
+    //on fait en sorte d'envoyer de maniere continue les packets lorsqu'ils ont le meme modificateur au debut.
+
+    for(size_t i = 0; i < len; i++)
+    {
+        
+        printf("char : %c | HID : %i | shift : %u \n", caracteres[i], arrayCharToSend[i].HidCode, arrayCharToSend[i].toucheModif) ;
 
 
+        
+        if(isThereAPacket == false)
+        {
+
+            for (size_t j = 3; j < TAILLE_PAQUET_USB; j++) {
+                paquet[j] = 0; //reinit a 0 de 3 a 7
+            }
+            u_int8_t currentShiftState = arrayCharToSend[i].toucheModif; //Warning obligatoire malheureusement, sinon le compilateur utilise un int et c'est le chaos assuré
+            paquet[0] = currentShiftState;
+            paquet[1] = 0;
+            paquet[2] = arrayCharToSend[i].HidCode;
+            packetIndex = 2;
+            counter = 1;
+            isThereAPacket = true;
+        }
+
+        else if(isThereAPacket == true)
+        {
+            packetIndex++;
+            paquet[packetIndex] = arrayCharToSend[i].HidCode;
+            counter++;
+        }
+
+        //on envoie le packet si le prochain a un shiftState différent ou si on est au dernier index
+        if(i == (len-1) || (counter >= 6))
+            {
+                sendPacket(periphClavier, paquet, tempsTraitementParPaquetMicroSecondes);
+                isThereAPacket = false;
+                counter = 0;
+                printf("Packet sent ! reason : len or counter \n");
+
+            }
+
+        else if ((u_int8_t)arrayCharToSend[i+1].toucheModif != (u_int8_t)currentShiftState)
+            {
+                sendPacket(periphClavier, paquet, tempsTraitementParPaquetMicroSecondes);
+                isThereAPacket = false;
+                counter = 0;
+                printf("Packet sent ! reason : currenShiftState\n");
+            }
+
+
+    }
+    
+
+    return len;
 }
+
+void sendPacket(FILE* peripherique, u_int8_t paquet[8], unsigned int tempsTraitementParPaquetMicroSecondes)
+{
+
+    for (size_t i = 0; i < 8; i++) {
+        printf("%u ", paquet[i]);
+    }
+    printf("\n");
+
+
+    fwrite(paquet, sizeof(u_int8_t), TAILLE_PAQUET_USB, peripherique);
+    //on envoie une trame avec des 0 pour relâcher la touche
+    static u_int8_t paquet_zeros[TAILLE_PAQUET_USB] = {0};
+    fwrite(paquet_zeros, sizeof(u_int8_t), TAILLE_PAQUET_USB, peripherique);
+    usleep(tempsTraitementParPaquetMicroSecondes);
+    
+}
+
+
+
