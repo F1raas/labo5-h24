@@ -47,4 +47,8 @@ Fonction ecrivant les caracteres sur le bus USB. Elle recoit les arguments suiva
 */
 int ecrireCaracteres(FILE* periphClavier, const char* caracteres, size_t len, unsigned int tempsTraitementParPaquetMicroSecondes);
 
+
+int asciiToHid(char c);
+
+void sendPacket(FILE* peripherique, u_int8_t paquet[8], unsigned int tempsTraitementParPaquetMicroSecondes);
 #endif

@@ -214,7 +214,7 @@ int main(int argc, char* argv[]){
     while(1){
         // Affichage des statistiques toutes les 2 secondes
         calculeStats(&stats);
-        //afficherStats((unsigned int)(round(get_time() - tempsDebut)), &stats);
+        afficherStats((unsigned int)(round(get_time() - tempsDebut)), &stats);
         resetStats();
         usleep(2e6);
     }

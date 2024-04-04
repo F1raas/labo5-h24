@@ -37,7 +37,7 @@ int asciiToHid(char c) {
 struct charToSendHID{int HidCode; u_int8_t toucheModif;};
 
 int ecrireCaracteres(FILE* periphClavier, const char* caracteres, size_t len, unsigned int tempsTraitementParPaquetMicroSecondes){
-    printf("emulateurClavier:ecrireCaracteres : entered, len = %zu \n", len);
+    //printf("emulateurClavier:ecrireCaracteres : entered, len = %zu \n", len);
     // TODO ecrivez votre code ici. Voyez les explications dans l'enonce et dans
     // emulateurClavier.h
     
@@ -69,7 +69,7 @@ int ecrireCaracteres(FILE* periphClavier, const char* caracteres, size_t len, un
     for(size_t i = 0; i < len; i++)
     {
         
-        printf("char : %c | HID : %i | shift : %u \n", caracteres[i], arrayCharToSend[i].HidCode, arrayCharToSend[i].toucheModif) ;
+        //printf("char : %c | HID : %i | shift : %u \n", caracteres[i], arrayCharToSend[i].HidCode, arrayCharToSend[i].toucheModif) ;
 
 
         
@@ -79,13 +79,15 @@ int ecrireCaracteres(FILE* periphClavier, const char* caracteres, size_t len, un
             for (size_t j = 3; j < TAILLE_PAQUET_USB; j++) {
                 paquet[j] = 0; //reinit a 0 de 3 a 7
             }
-            u_int8_t currentShiftState = arrayCharToSend[i].toucheModif; //Warning obligatoire malheureusement, sinon le compilateur utilise un int et c'est le chaos assuré
+            
+            currentShiftState = (u_int8_t)arrayCharToSend[i].toucheModif; //sans cast, le type change bizarrement
             paquet[0] = currentShiftState;
             paquet[1] = 0;
             paquet[2] = arrayCharToSend[i].HidCode;
             packetIndex = 2;
             counter = 1;
             isThereAPacket = true;
+            //printf("New packet : arrayCharToSend.toucheModif is %u currenShiftState is : %u\n", (u_int8_t)arrayCharToSend[i+1].toucheModif, (u_int8_t)currentShiftState);
         }
 
         else if(isThereAPacket == true)
@@ -96,12 +98,13 @@ int ecrireCaracteres(FILE* periphClavier, const char* caracteres, size_t len, un
         }
 
         //on envoie le packet si le prochain a un shiftState différent ou si on est au dernier index
+        //printf("Checking packet state arrayCharToSend.toucheModif is %u currenShiftState is : %u\n", (u_int8_t)arrayCharToSend[i+1].toucheModif, (u_int8_t)currentShiftState);
         if(i == (len-1) || (counter >= 6))
             {
                 sendPacket(periphClavier, paquet, tempsTraitementParPaquetMicroSecondes);
                 isThereAPacket = false;
                 counter = 0;
-                printf("Packet sent ! reason : len or counter \n");
+                //printf("Packet sent ! reason : len or counter \n");
 
             }
 
@@ -110,7 +113,7 @@ int ecrireCaracteres(FILE* periphClavier, const char* caracteres, size_t len, un
                 sendPacket(periphClavier, paquet, tempsTraitementParPaquetMicroSecondes);
                 isThereAPacket = false;
                 counter = 0;
-                printf("Packet sent ! reason : currenShiftState\n");
+                //printf("Packet sent ! reason : arrayCharToSend.toucheModif was %u currenShiftState was : %u\n", (u_int8_t)arrayCharToSend[i+1].toucheModif, (u_int8_t)currentShiftState);
             }
 
 
