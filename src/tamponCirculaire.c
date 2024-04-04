@@ -116,10 +116,19 @@ int insererDonnee(struct requete *req){
 
     pthread_mutex_lock(&mutexTampon);
     req->tempsReception = get_time();
+    nombreRequetesRecues++;
+
+    if(longueurCourante> memoireTaille)
+    {
+        nombreRequetesPerdues++;
+        pthread_mutex_unlock(&mutexTampon);
+        return -1;
+    }
+
     void* dest = memoire + posEcriture * sizeof(struct requete);
     memcpy(dest, req, sizeof(struct requete));
     longueurCourante++;
-    nombreRequetesRecues++;
+    
 
        posEcriture++;
     if(posEcriture >= memoireTaille)
@@ -127,6 +136,8 @@ int insererDonnee(struct requete *req){
         posEcriture = 0;
     }
     pthread_mutex_unlock(&mutexTampon);
+    return 0;
+    
 }
 
 

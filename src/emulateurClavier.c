@@ -126,10 +126,10 @@ int ecrireCaracteres(FILE* periphClavier, const char* caracteres, size_t len, un
 void sendPacket(FILE* peripherique, u_int8_t paquet[8], unsigned int tempsTraitementParPaquetMicroSecondes)
 {
 
-    for (size_t i = 0; i < 8; i++) {
-        printf("%u ", paquet[i]);
-    }
-    printf("\n");
+    //for (size_t i = 0; i < 8; i++) {
+    //    printf("%u ", paquet[i]);
+    //}
+    //printf("\n");
 
 
     fwrite(paquet, sizeof(u_int8_t), TAILLE_PAQUET_USB, peripherique);
