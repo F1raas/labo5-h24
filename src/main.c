@@ -121,9 +121,7 @@ static void* threadFonctionLecture(void *args){
 
             if(taille_read == 0) break;
             if( taille_read < 0 ){
-                char* str = (char*)malloc(sizeof(char));
-                sprintf(str, "Erreur lors de la lecture");
-                perror( str );
+                printf("threadFonctionLecture : erreur lors de la lecture");
                 exit(EXIT_FAILURE);
             }
 
@@ -131,7 +129,8 @@ static void* threadFonctionLecture(void *args){
 
             req.taille++;
 
-        }while( last_read != ASCII_EOT );
+        }
+        while(last_read != ASCII_EOT);
 
         insererDonnee(&req);
 
@@ -160,6 +159,8 @@ int main(int argc, char* argv[]){
     // 1) Ouvrir le named pipe
     // TODO
     char namedPipe[100];
+
+
     strcpy(namedPipe, argv[1]);
     uint waitingTime = atoi(argv[2]);
     uint sizeTampon = atoi(argv[3]);
